@@ -5,7 +5,7 @@ import tensorflow as tf
 hparams = tf.contrib.training.HParams(
 	# Comma-separated list of cleaners to run on text prior to training and eval. For non-English
 	# text, you may want to use "basic_cleaners" or "transliteration_cleaners".
-	cleaners='english_cleaners',
+	cleaners='basic_cleaners',
 
 
 	#If you only have 1 GPU or want to use only one GPU, please set num_gpus=0 and specify the GPU idx on run. example:
@@ -60,13 +60,13 @@ hparams = tf.contrib.training.HParams(
 	#		.ipynb provided in the repo to listen to some inverted mel/linear spectrograms. That will first give you some idea about your above parameters, and
 	#		it will also give you an idea about trimming. If silences persist, try reducing trim_top_db slowly. If samples are trimmed mid words, try increasing it.
 	#	6- If audio quality is too metallic or fragmented (or if linear spectrogram plots are showing black silent regions on top), then restart from step 2.
-	num_mels = 80, #Number of mel-spectrogram channels and local conditioning dimensionality
-	num_freq = 1025, # (= n_fft / 2 + 1) only used when adding linear spectrograms post processing network
-	rescale = True, #Whether to rescale audio prior to preprocessing
+	num_mels = 20, #Number of mel-spectrogram channels and local conditioning dimensionality
+	num_freq = 513, # (= n_fft / 2 + 1) only used when adding linear spectrograms post processing network
+	rescale = False, #Whether to rescale audio prior to preprocessing
 	rescaling_max = 0.999, #Rescaling value
 
 	#train samples of lengths between 3sec and 14sec are more than enough to make a model capable of generating consistent speech.
-	clip_mels_length = True, #For cases of OOM (Not really recommended, only use if facing unsolvable OOM errors, also consider clipping your samples to smaller chunks)
+	clip_mels_length = False, #For cases of OOM (Not really recommended, only use if facing unsolvable OOM errors, also consider clipping your samples to smaller chunks)
 	max_mel_frames = 900,  #Only relevant when clip_mels_length = True, please only use after trying output_per_steps=3 and still getting OOM errors.
 
 	# Use LWS (https://github.com/Jonathan-LeRoux/lws) for STFT and phase reconstruction
@@ -76,32 +76,32 @@ hparams = tf.contrib.training.HParams(
 	silence_threshold=2, #silence threshold used for sound trimming for wavenet preprocessing
 
 	#Mel spectrogram
-	n_fft = 2048, #Extra window size is filled with 0 paddings to match this parameter
-	hop_size = 275, #For 22050Hz, 275 ~= 12.5 ms (0.0125 * sample_rate)
-	win_size = 1100, #For 22050Hz, 1100 ~= 50 ms (If None, win_size = n_fft) (0.05 * sample_rate)
-	sample_rate = 22050, #22050 Hz (corresponding to ljspeech dataset) (sox --i <filename>)
+	n_fft = 1024, #Extra window size is filled with 0 paddings to match this parameter
+	hop_size = 1600, #For 22050Hz, 275 ~= 12.5 ms (0.0125 * sample_rate)
+	win_size = 800, #For 22050Hz, 1100 ~= 50 ms (If None, win_size = n_fft) (0.05 * sample_rate)
+	sample_rate = 16000, #22050 Hz (corresponding to ljspeech dataset) (sox --i <filename>)
 	frame_shift_ms = None, #Can replace hop_size parameter. (Recommended: 12.5)
 	magnitude_power = 2., #The power of the spectrogram magnitude (1. for energy, 2. for power)
 
 	#M-AILABS (and other datasets) trim params (there parameters are usually correct for any data, but definitely must be tuned for specific speakers)
-	trim_silence = True, #Whether to clip silence in Audio (at beginning and end of audio only, not the middle)
+	trim_silence = False, #Whether to clip silence in Audio (at beginning and end of audio only, not the middle)
 	trim_fft_size = 2048, #Trimming window size
 	trim_hop_size = 512, #Trimmin hop length
 	trim_top_db = 40, #Trimming db difference from reference db (smaller==harder trim.)
 
 	#Mel and Linear spectrograms normalization/scaling and clipping
-	signal_normalization = True, #Whether to normalize mel spectrograms to some predefined range (following below parameters)
-	allow_clipping_in_normalization = True, #Only relevant if mel_normalization = True
-	symmetric_mels = True, #Whether to scale the data to be symmetric around 0. (Also multiplies the output range by 2, faster and cleaner convergence)
+	signal_normalization = False, #Whether to normalize mel spectrograms to some predefined range (following below parameters)
+	allow_clipping_in_normalization = False, #Only relevant if mel_normalization = True
+	symmetric_mels = False, #Whether to scale the data to be symmetric around 0. (Also multiplies the output range by 2, faster and cleaner convergence)
 	max_abs_value = 4., #max absolute value of data. If symmetric, data will be [-max, max] else [0, max] (Must not be too big to avoid gradient explosion, 
 																										  #not too small for fast convergence)
-	normalize_for_wavenet = True, #whether to rescale to [0, 1] for wavenet. (better audio quality)
-	clip_for_wavenet = True, #whether to clip [-max, max] before training/synthesizing with wavenet (better audio quality)
+	normalize_for_wavenet = False, #whether to rescale to [0, 1] for wavenet. (better audio quality)
+	clip_for_wavenet = False, #whether to clip [-max, max] before training/synthesizing with wavenet (better audio quality)
 	wavenet_pad_sides = 1, #Can be 1 or 2. 1 for pad right only, 2 for both sides padding.
 
 	#Contribution by @begeekmyfriend
 	#Spectrogram Pre-Emphasis (Lfilter: Reduce spectrogram noise and helps model certitude levels. Also allows for better G&L phase reconstruction)
-	preemphasize = True, #whether to apply filter
+	preemphasize = False, #whether to apply filter
 	preemphasis = 0.97, #filter coefficient.
 
 	#Limits
@@ -113,7 +113,7 @@ hparams = tf.contrib.training.HParams(
 	#Griffin Lim
 	power = 1.5, #Only used in G&L inversion, usually values between 1.2 and 1.5 are a good choice.
 	griffin_lim_iters = 60, #Number of G&L iterations, typically 30 is enough but we use 60 to ensure convergence.
-	GL_on_GPU = True, #Whether to use G&L GPU version as part of tensorflow graph. (Usually much faster than CPU but slightly worse quality too).
+	GL_on_GPU = False, #Whether to use G&L GPU version as part of tensorflow graph. (Usually much faster than CPU but slightly worse quality too).
 	###########################################################################################################################################
 
 	#Tacotron
@@ -121,7 +121,7 @@ hparams = tf.contrib.training.HParams(
 	outputs_per_step = 1, #number of frames to generate at each decoding step (increase to speed up computation and allows for higher batch size, decreases G&L audio quality)
 	stop_at_any = True, #Determines whether the decoder should stop when predicting <stop> to any frame or to all of them (True works pretty well)
 	batch_norm_position = 'after', #Can be in ('before', 'after'). Determines whether we use batch norm before or after the activation function (relu). Matter for debate.
-	clip_outputs = True, #Whether to clip spectrograms to T2_output_range (even in loss computation). ie: Don't penalize model for exceeding output range and bring back to borders.
+	clip_outputs = False, #Whether to clip spectrograms to T2_output_range (even in loss computation). ie: Don't penalize model for exceeding output range and bring back to borders.
 	lower_bound_decay = 0.1, #Small regularizer for noise synthesis by adding small range of penalty for silence regions. Set to 0 to clip in Tacotron range.
 
 	#Input parameters
@@ -172,7 +172,7 @@ hparams = tf.contrib.training.HParams(
 	mask_encoder = True, #whether to mask encoder padding while computing attention. Set to True for better prosody but slower convergence.
 	mask_decoder = False, #Whether to use loss mask for padded sequences (if False, <stop_token> loss function will not be weighted, else recommended pos_weight = 20)
 	cross_entropy_pos_weight = 1, #Use class weights to reduce the stop token classes imbalance (by adding more penalty on False Negatives (FN)) (1 = disabled)
-	predict_linear = True, #Whether to add a post-processing network to the Tacotron to predict linear spectrograms (True mode Not tested!!)
+	predict_linear = False, #Whether to add a post-processing network to the Tacotron to predict linear spectrograms (True mode Not tested!!)
 	###########################################################################################################################################
 
 	#Wavenet
@@ -226,7 +226,7 @@ hparams = tf.contrib.training.HParams(
 
 	#global conditioning
 	gin_channels = -1, #Set this to -1 to disable global conditioning, Only used for multi speaker dataset. It defines the depth of the embeddings (Recommended: 16)
-	use_speaker_embedding = True, #whether to make a speaker embedding
+	use_speaker_embedding = False, #whether to make a speaker embedding
 	n_speakers = 5, #number of speakers (rows of the embedding)
 	speakers_path = None, #Defines path to speakers metadata. Can be either in "speaker\tglobal_id" (with header) tsv format, or a single column tsv with speaker names. If None, use "speakers".
 	speakers = ['speaker0', 'speaker1', #List of speakers used for embeddings visualization. (Consult "wavenet_vocoder/train.py" if you want to modify the speaker names source).
@@ -251,11 +251,11 @@ hparams = tf.contrib.training.HParams(
 
 	#Learning rate schedule
 	tacotron_decay_learning_rate = True, #boolean, determines if the learning rate will follow an exponential decay
-	tacotron_start_decay = 40000, #Step at which learning decay starts
+	tacotron_start_decay = 30000, #Step at which learning decay starts
 	tacotron_decay_steps = 18000, #Determines the learning rate decay slope (UNDER TEST)
 	tacotron_decay_rate = 0.5, #learning rate decay rate (UNDER TEST)
 	tacotron_initial_learning_rate = 1e-3, #starting learning rate
-	tacotron_final_learning_rate = 1e-4, #minimal learning rate
+	tacotron_final_learning_rate = 1e-5, #minimal learning rate
 
 	#Optimization parameters
 	tacotron_adam_beta1 = 0.9, #AdamOptimizer beta1 parameter
@@ -334,7 +334,7 @@ hparams = tf.contrib.training.HParams(
 	wavenet_natural_eval = False, #Whether to use 100% natural eval (to evaluate autoregressivity performance) or with teacher forcing to evaluate overfit and model consistency.
 
 	#Tacotron-2 integration parameters
-	train_with_GTA = True, #Whether to use GTA mels to train WaveNet instead of ground truth mels.
+	train_with_GTA = False, #Whether to use GTA mels to train WaveNet instead of ground truth mels.
 	###########################################################################################################################################
 
 	#Eval/Debug parameters
