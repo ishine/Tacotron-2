@@ -125,7 +125,7 @@ class Feeder:
 		text = meta[5]
 
 		input_data = np.asarray(text_to_sequence(text, self._cleaner_names), dtype=np.int32)
-		mel_target = np.fromfile(os.path.join(self._audio_dir, meta[0].replace('audio-','')), dtype='float32')
+		mel_target = np.fromfile(os.path.join('/mnt/training_data/audio', meta[0].replace('audio-','').replace('/mels/','/audio/')), dtype='float32')
 		mel_target = np.resize(mel_target, (-1, self._hparams.num_mels))
 		#Create parallel sequences containing zeros to represent a non finished sequence
 		token_target = np.asarray([0.] * (len(mel_target) - 1))
@@ -190,7 +190,7 @@ class Feeder:
 		text = meta[5]
 
 		input_data = np.asarray(text_to_sequence(text, self._cleaner_names), dtype=np.int32)
-		mel_target = np.fromfile(os.path.join(self._audio_dir, meta[0].replace('audio-','')), dtype='float32')
+		mel_target = np.fromfile(os.path.join('/mnt/training_data/audio', meta[0].replace('audio-','').replace('/mels/','/audio/')), dtype='float32')
 		mel_target = np.resize(mel_target, (-1, self._hparams.num_mels))
 		#Create parallel sequences containing zeros to represent a non finished sequence
 		token_target = np.asarray([0.] * (len(mel_target) - 1))
