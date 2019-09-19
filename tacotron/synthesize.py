@@ -65,7 +65,10 @@ def run_eval(args, checkpoint_path, output_dir, hparams, sentences):
 			start = time.time()
 			basenames = ['batch_{}_sentence_{}'.format(i, j) for j in range(len(texts))]
 			mel_filenames, speaker_ids = synth.synthesize(texts, basenames, eval_dir, log_dir, None)
-
+			print("Features f32 file created for text")
+			end = time.time()
+			print(">>>>>LPCNet Feature to PCM Conversion time = {}".format(end-start))	    
+		
 			for elems in zip(texts, mel_filenames, speaker_ids):
 				file.write('|'.join([str(x) for x in elems]) + '\n')
 	log('synthesized mel spectrograms at {}'.format(eval_dir))

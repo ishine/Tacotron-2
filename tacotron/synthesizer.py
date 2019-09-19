@@ -1,5 +1,6 @@
 import os
 import wave
+import random
 from datetime import datetime
 
 import numpy as np
@@ -194,6 +195,12 @@ class Synthesizer:
 				speaker_id = '<no_g>'
 				speaker_ids.append(speaker_id)
 
+   
+			npy_data = mel.reshape((-1,))
+			print("==================SAVING LPCNet FEATURES===================")
+			print(npy_data)
+			npy_data.tofile('feature-{}.f32'.format(random.randint(1,101)))
+			print("==============================================")
 			# Write the spectrogram to disk
 			# Note: outputs mel-spectrogram files and target ones have same names, just different folders
 			mel_filename = os.path.join(out_dir, 'mel-{}.npy'.format(basenames[i]))
