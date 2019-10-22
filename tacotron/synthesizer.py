@@ -100,7 +100,7 @@ class Synthesizer:
 		try:
 			print("==================OPTIMIZED MODEL===================")
 			optimize_for_inference_lib.ensure_graph_is_valid(const_graph_def)
-			tf.train.write_graph(const_graph_def, '.', 'optimized_frozen_wavenet.pb', as_text=False)
+			tf.train.write_graph(const_graph_def, '.', 'optimized_frozen_tacotron.pb', as_text=False)
 		except ValueError as e:
 			print('Graph is invalid - {}'.format(e))
             
