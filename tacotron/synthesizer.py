@@ -13,9 +13,14 @@ from librosa import effects
 from tacotron.models import create_model
 from tacotron.utils import plot
 from tacotron.utils.text import text_to_sequence
+from tensorflow.python.tools import optimize_for_inference_lib
+from tensorflow.tools.graph_transforms import TransformGraph
+from tensorflow.python.framework import graph_util
+from tensorflow.python.platform import gfile
 
 
 class Synthesizer:
+	
 	def load(self, checkpoint_path, hparams, gta=False, model_name='Tacotron'):
 		log('Constructing model: %s' % model_name)
 		#Force the batch size to be known in order to use attention masking in batch synthesis
@@ -30,10 +35,10 @@ class Synthesizer:
 			else:
 				self.model.initialize(inputs, input_lengths, split_infos=split_infos)
 
-			self.mel_outputs = self.model.tower_mel_outputs
-			self.linear_outputs = self.model.tower_linear_outputs if (hparams.predict_linear and not gta) else None
-			self.alignments = self.model.tower_alignments
-			self.stop_token_prediction = self.model.tower_stop_token_prediction
+			self.mel_outputs = self.model.mel_outputs
+			self.linear_outputs = self.model.linear_outputs if (hparams.predict_linear and not gta) else None
+			self.alignments = self.model.alignments
+			self.stop_token_prediction = self.model.stop_token_prediction
 			self.targets = targets
 
 		if hparams.GL_on_GPU:
@@ -70,6 +75,35 @@ class Synthesizer:
 
 		saver = tf.train.Saver()
 		saver.restore(self.session, checkpoint_path)
+		print(self.model.inputs)
+		print(self.model.input_lengths)
+		print(self.model.mel_outputs)
+		minimal_graph = tf.graph_util.convert_variables_to_constants(self.session, self.session.graph_def, ["Tacotron_model/inference/add"])
+		tf.train.write_graph(minimal_graph, '.', 'inference_model.pb', as_text=False)
+		transformed_graph_def = TransformGraph(
+                self.session.graph.as_graph_def(), 
+                inputs=['inputs','input_lengths'],
+                outputs=['Tacotron_model/inference/add'],
+                transforms=['add_default_attributes',
+                            'remove_nodes(op=Identity, op=CheckNumrics)',
+                            'fold_old_batch_norms',
+                            'strip_unused_nodes',
+                            'sort_by_execution_order']
+                )
+
+		const_graph_def = graph_util.convert_variables_to_constants(
+                self.session,
+                transformed_graph_def,
+                ['Tacotron_model/inference/add']
+                )
+
+		try:
+			print("==================OPTIMIZED MODEL===================")
+			optimize_for_inference_lib.ensure_graph_is_valid(const_graph_def)
+			tf.train.write_graph(const_graph_def, '.', 'optimized_frozen_tacotron.pb', as_text=False)
+		except ValueError as e:
+			print('Graph is invalid - {}'.format(e))
+            
 
 
 	def synthesize(self, texts, basenames, out_dir, log_dir, mel_filenames):
@@ -137,7 +171,9 @@ class Synthesizer:
 
 			#Take off the batch wise padding
 			mels = [mel[:target_length, :] for mel, target_length in zip(mels, target_lengths)]
+			print(mels)
 			assert len(mels) == len(texts)
+
 
 		else:
 			linears, mels, alignments, stop_tokens = self.session.run([self.linear_outputs, self.mel_outputs, self.alignments, self.stop_token_prediction], feed_dict=feed_dict)
@@ -195,16 +231,17 @@ class Synthesizer:
 				speaker_id = '<no_g>'
 				speaker_ids.append(speaker_id)
 
-   
+
 			npy_data = mel.reshape((-1,))
 			print("==================SAVING LPCNet FEATURES===================")
 			print(npy_data)
-			npy_data.tofile('feature-{}.f32'.format(random.randint(1,101)))
+			npy_data.tofile('feature-{}.f32'.format(basenames[i]))
 			print("==============================================")
 			# Write the spectrogram to disk
 			# Note: outputs mel-spectrogram files and target ones have same names, just different folders
+			print(out_dir)
 			mel_filename = os.path.join(out_dir, 'mel-{}.npy'.format(basenames[i]))
-			np.save(mel_filename, mel, allow_pickle=False)
+			npy_data.tofile(mel_filename)
 			saved_mels_paths.append(mel_filename)
 
 			if log_dir is not None:
